@@ -1,0 +1,11 @@
+{
+    "token": "",
+    "organizationName": "NamelessMC",
+    "repositoryName": "BotConfiguration",
+    "branch": "master",
+    "guildID": "246705793066467328",
+
+
+    "welcomeChannelName": "welcome",
+    "imageExtensions": [".png", ".jpg"]
+}
