@@ -5,7 +5,7 @@ class Cache<T> {
     private expireTime: number = 60*1000*60*12; // 60*1000=60seconds*60=1hour*12=1day
 
 
-    constructor(expireTime: number | undefined = undefined) {
+    constructor(expireTime?: number) {
         if (expireTime) this.expireTime = expireTime;
     }
 
