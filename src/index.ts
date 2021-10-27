@@ -38,6 +38,10 @@ import './listeners/messageListener';
 client.on('ready', () => {
     console.log(`${client.user?.username} is ready...`);
     cmdHandler.deploy();
-})
+
+    // Status
+    client.user?.setActivity({ name: '/support | namelessmc.com', type: 'PLAYING' });
+    setInterval(() => client.user?.setActivity({ name: '/support | namelessmc.com', type: 'PLAYING' }), 60*1000*60)
+});
 
 client.login(config.token);
