@@ -1,8 +1,13 @@
 import { config } from "../../index";
 import { Client, Collection, Message } from "discord.js";
-import ArgDirCommand from "../commandTypes/ArgDir";
+import getFileFromRepository from "../../util/getFileFromRepository";
 
-type Command = ArgDirCommand;
+import ArgDirCommand from "../commandTypes/ArgDir";
+import BasicCommand from "../commandTypes/Basic";
+import HelpCommand from "../custom/helpCommand";
+import updateDataCommand from "../custom/updateDataCommand";
+
+type Command = ArgDirCommand | BasicCommand;
 
 class CommandHandler {
 
@@ -23,6 +28,21 @@ class CommandHandler {
             const command = this.commands.get(cmd)!;
             command.execute(message, args);
         });
+    }
+    
+    public loadCommands() {
+        const commands = JSON.parse(getFileFromRepository('/commands.json'))?.commands;
+        for (const command of commands) { 
+            if (command.type === 'argdir') {
+                this.load(new ArgDirCommand(command.aliases[0], command.description));
+            } else if (command.type === 'basic') {
+                this.load(new BasicCommand(command.aliases[0], command.description));
+            }
+        }
+
+        // Hardcoded commands
+        this.loadCustom(new HelpCommand());
+        this.loadCustom(new updateDataCommand());
     }
 
     public load(command: Command) {

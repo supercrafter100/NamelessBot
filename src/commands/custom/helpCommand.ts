@@ -11,7 +11,7 @@ class HelpCommand {
     public execute(msg: Message, _args: string[]) {
 
         const contents = JSON.parse(getFileFromRepository("/commands.json")) as HelpConfig;
-        const commands = contents.commands;
+        const commands = contents.commands.filter(command => command.hidden !== true);
         
         EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, "Help", "", commands.map(c => `**${c.aliases[0]}**: ${c.description}`).join('\n'))
     }

@@ -25,6 +25,6 @@ export interface HelpConfig {
         aliases: string[];
         description: string;
         type: string;
-        hidden: string
+        hidden: boolean;
     }[]
 }

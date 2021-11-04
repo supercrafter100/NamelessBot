@@ -1,0 +1,2 @@
+- Add channel exclusions to ocr & auto responses
+- Set presense in client constructor

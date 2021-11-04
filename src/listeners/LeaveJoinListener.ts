@@ -13,7 +13,7 @@ client.on('guildMemberAdd', async (member) => {
     const members = await member.guild.members.fetch();
     const memberCount = members.filter(c => !c.user.bot).size;
 
-    const channel = (await member.guild.channels.fetch()).find(c => c.name === config.welcomeChannelName) as TextChannel;
+    const channel = (await member.guild.channels.fetch()).get(config.welcomeChannelId) as TextChannel;
     if (!channel) {
         return;
     }
