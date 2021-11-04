@@ -1,80 +1,47 @@
-import { CommandInteraction } from "discord.js";
-import GetLatestCommitHash from "../../util/GetLatestCommitHash";
-import Cache from '../../cache/Cache';
-import { Command, CommandParemeters } from "../../constants/types";
-import { SlashCommandBuilder } from "@discordjs/builders";
-import { config } from "../../index";
-import fetch from "node-fetch";
+import { Message } from "discord.js";
 import EmbedUtils from "../../constants/EmbedUtil";
-
-const CommandCache = new Cache<Command>();
+import { Command, CommandParemeters } from "../../constants/types";
+import getFileFromRepository from "../../util/getFileFromRepository";
 
 class ArgDirCommand {
 
+    public name: string;
+    public description: string;
+
     constructor(name: string, description: string) {
-        this.command.setName(name.toLowerCase());
-        this.command.setDescription(description);
-        this.command.addStringOption((option) => option.setName("parameter").setDescription("The parameter you want to pass into this command"));
+        this.name = name;
+        this.description = description;
     }
 
-    public command = new SlashCommandBuilder();
-
-    public async execute(ctx: CommandInteraction) {
-
-        const commandName = this.command.name;
-        const input = ctx.options.getString("parameter")?.toLowerCase();
+    public execute(msg: Message, args: string[]) {
+        
+        const commandName = this.name;
+        const parameter = args[0]?.toLowerCase();
 
         // If no arguments are given, list all available parameters
+        if (!parameter) {
+            
+            const commands = JSON.parse(getFileFromRepository(`./commands/${commandName}.json`));
+            if (!commands) return;
 
-        if (!input) {
-            // Check if the command already exists in cache
-            const response = CommandCache.get(commandName);
-            if (response) {
-                this.handleResponse(ctx, response);
-            }
-    
-            // Get latest commit hash
-            const latestCommitHash = await GetLatestCommitHash();
-    
-            // Check if the command exists
-            const githubURL = `https://raw.githubusercontent.com/${config.organizationName}/${config.repositoryName}/${latestCommitHash}/commands/${encodeURIComponent(commandName)}.json`
-            const command = await fetch(githubURL).then((response) => response.json()) as Command;
-            if (!command) return;
-    
-            // Put it in cache and handle it out
-            CommandCache.put(commandName, command);
-            return this.handleResponse(ctx, command);
+            return this.handleResponse(msg, commands);
         }
 
-        // Check if the command already exists in cache
-        const response = CommandCache.get(input);
-        if (response) {
-            this.handleResponse(ctx, response);
-        }
-
-        // Get latest commit hash
-        const latestCommitHash = await GetLatestCommitHash();
-
-        // Check if the command exists
-        const githubURL = `https://raw.githubusercontent.com/${config.organizationName}/${config.repositoryName}/${latestCommitHash}/commands/${encodeURIComponent(commandName)}/${encodeURIComponent(input)}.json`
         try {
-            const command = await fetch(githubURL).then((response) => response.json()) as Command;
+            const command = JSON.parse(getFileFromRepository(`./commands/${commandName}/${parameter}.json`));
             if (!command) return;
-
-            // Put it in cache and handle it out
-            CommandCache.put(input, command);
-            return this.handleResponse(ctx, command);
+    
+            return this.handleResponse(msg, command);
         } catch (error) {
-            EmbedUtils.sendResponse(ctx, EmbedUtils.embedColor.ERROR, "Error", "", "The parameter you requested doesn't exist.");
+            EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.ERROR, "Error", "", "The parameter you requested doesn't exist.");
         }
-
     }
 
-    public async handleResponse(ctx: CommandInteraction, response: Command | CommandParemeters) {
+    public async handleResponse(msg: Message, response: Command | CommandParemeters) {
         if (isCommand(response)) {
-            EmbedUtils.sendResponse(ctx, EmbedUtils.embedColor.OK, response.title, response.footer, response.body.join('\n'));
+            EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, response.title, response.footer, response.body.join('\n'));
         } else {
-            EmbedUtils.sendResponse(ctx, EmbedUtils.embedColor.OK, response.title, response.footer, "Available parameters: " + response.parameters.map(c => `\`${c}\``).join(', '))
+            EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, response.title, response.footer, "Available parameters: " + response.parameters.map(c => `\`${c}\``).join(', '))
         }
     }
 }
@@ -83,4 +50,4 @@ function isCommand(input: Command | CommandParemeters): input is Command { //mag
     return (<CommandParemeters>input).parameters == undefined;
 }
 
-export default ArgDirCommand
+export default ArgDirCommand;

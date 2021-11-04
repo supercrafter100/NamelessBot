@@ -1,13 +1,10 @@
 import SingleValueCache from '../cache/SingleValueCache';
 import { client, config } from '../index';
 import { OCRConfig } from '../constants/types';
-import GetLatestCommitHash from '../util/GetLatestCommitHash';
-import fetch from 'node-fetch';
 import Tesseract from 'tesseract.js';
 import EmbedUtils from '../constants/EmbedUtil';
+import getFileFromRepository from '../util/getFileFromRepository';
 
-
-const responsesCache = new SingleValueCache<OCRConfig[]>();
 
 client.on('messageCreate', async (msg) => {
     if (!msg.guild) return;
@@ -16,8 +13,8 @@ client.on('messageCreate', async (msg) => {
     // Global text that ocr gets run on
     let text = "";
 
-    // Check if the value is still cached
-    const responses = await getResponses();
+    // Get all available responses
+    const responses = JSON.parse(getFileFromRepository('/autoresponse.json')) as OCRConfig[];
 
     // Check for attachments
     for (const attachment of msg.attachments.toJSON()) {
@@ -59,7 +56,7 @@ client.on('messageCreate', async (msg) => {
     if (!matchedResponse) {
         return;
     }
-    EmbedUtils.sendRegularResponse(msg, EmbedUtils.embedColor.OK, matchedResponse.response.title, matchedResponse.response.footer, matchedResponse.response.body.join('\n'));
+    EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, matchedResponse.response.title, matchedResponse.response.footer, matchedResponse.response.body.join('\n'));
 })
 
 function matchResponse(responses: OCRConfig[], text: string) {
@@ -81,27 +78,11 @@ function matchResponse(responses: OCRConfig[], text: string) {
 
 function matchKeywords(keywords: string[], text: string) {
     for (const keyword of keywords) {
-        if (!text.toLowerCase().includes(keyword)) {
+        if (!text.toLowerCase().includes(keyword.toLowerCase())) {
             return false;
         }
     }
     return true;
-}
-
-async function getResponses() {
-
-    let responses = responsesCache.get();
-    if (responses) {
-        return responses;
-    }
-
-    const latestCommitHash = await GetLatestCommitHash();
-
-    const githubURL = `https://raw.githubusercontent.com/${config.organizationName}/${config.repositoryName}/${latestCommitHash}/autoresponse.json`;
-    responses = await fetch(githubURL).then((res) => res.json()) as OCRConfig[];
-
-    responsesCache.put(responses);
-    return responses;
 }
 
 function isValidImageURL(text: string) {

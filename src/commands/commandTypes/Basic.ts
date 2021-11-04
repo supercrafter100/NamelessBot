@@ -1,50 +1,36 @@
-import { CommandInteraction } from "discord.js";
-import GetLatestCommitHash from "../../util/GetLatestCommitHash";
-import Cache from '../../cache/Cache';
-import { Command, CommandParemeters } from "../../constants/types";
-import { SlashCommandBuilder } from "@discordjs/builders";
-import { config } from "../../index";
-import fetch from "node-fetch";
+import { Message } from "discord.js";
 import EmbedUtils from "../../constants/EmbedUtil";
-
-const CommandCache = new Cache<Command>();
+import { Command } from "../../constants/types";
+import getFileFromRepository from "../../util/getFileFromRepository";
 
 class BasicCommand {
 
+    public name: string;
+    public description: string;
+
     constructor(name: string, description: string) {
-        this.command.setName(name.toLowerCase());
-        this.command.setDescription(description);
+        this.name = name;
+        this.description = description;
     }
 
-    public command = new SlashCommandBuilder();
+    public execute(msg: Message, args: string[]) {
 
-    public async execute(ctx: CommandInteraction) {
+        const commandName = this.name;
 
-        const commandName = this.command.name;
+        // Get the command from the files
+        try {
+            const command = JSON.parse(getFileFromRepository(`/commands/${commandName}.json`));
+            if (!command) return;
 
-        // Check if the command already exists in cache
-        const response = CommandCache.get(commandName);
-        if (response) {
-            this.handleResponse(ctx, response);
+            return this.handleResponse(msg, command);
+        } catch (error) {
+            // Ignore the error, the command doesn't exist
         }
-
-        // Get latest commit hash
-        const latestCommitHash = await GetLatestCommitHash();
-
-        // Check if the command exists
-        const githubURL = `https://raw.githubusercontent.com/${config.organizationName}/${config.repositoryName}/${latestCommitHash}/commands/${encodeURIComponent(commandName)}.json`
-        const command = await fetch(githubURL).then((response) => response.json()) as Command;
-        if (!command) return;
-
-        // Put it in cache and handle it out
-        CommandCache.put(commandName, command);
-        return this.handleResponse(ctx, command);
-
     }
 
-    public async handleResponse(ctx: CommandInteraction, response: Command) {
-        EmbedUtils.sendResponse(ctx, EmbedUtils.embedColor.OK, response.title, response.footer, response.body.join('\n'));
+    public async handleResponse(msg: Message, response: Command) {
+        EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, response.title, response.footer, response.body.join('\n'));
     }
 }
 
-export default BasicCommand
+export default BasicCommand;

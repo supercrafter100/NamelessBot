@@ -11,7 +11,7 @@ export default class EmbedUtils {
         'ERROR': '#D60334'
     }
 
-    static async sendResponse(ctx: CommandInteraction, color: ColorResolvable, title: string, footer: string, body: string) {
+    static async sendSlashResponse(ctx: CommandInteraction, color: ColorResolvable, title: string, footer: string, body: string) {
         if (!ctx.guild?.me?.permissions.has("SEND_MESSAGES")) {
             return;
         }
@@ -34,7 +34,7 @@ export default class EmbedUtils {
         }
     }
 
-    static async sendRegularResponse(msg: Message, color: ColorResolvable, title: string, footer: string, body: string) {
+    static async sendResponse(msg: Message, color: ColorResolvable, title: string, footer: string, body: string) {
         if (!msg.guild?.me?.permissions.has("SEND_MESSAGES")) {
             return;
         }

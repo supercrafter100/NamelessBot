@@ -4,8 +4,13 @@
     "repositoryName": "BotConfiguration",
     "branch": "master",
     "guildID": "246705793066467328",
+    "prefix": ">",
 
 
     "welcomeChannelName": "welcome",
-    "imageExtensions": [".png", ".jpg"]
+    "imageExtensions": [".png", ".jpg"],
+
+    "botowners": [
+        "314046311035043840"
+    ]
 }

@@ -1,27 +1,19 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
-import { CommandInteraction } from "discord.js";
-import getLatestCommitHash from "../../util/GetLatestCommitHash";
-import { config } from "../../index";
-import fetch from 'node-fetch';
-import { HelpConfig } from "../../constants/types";
+import { Message } from "discord.js";
 import EmbedUtils from "../../constants/EmbedUtil";
+import { HelpConfig } from "../../constants/types";
+import getFileFromRepository from "../../util/getFileFromRepository";
 
 class HelpCommand {
-    public command = new SlashCommandBuilder()
-        .setName("help")
-        .setDescription("If you don't know what to do? Let the bot tell you what to do !");
 
-    public async execute(ctx: CommandInteraction) {
+    public name: string = "help";
+    public description: string = "Displays all the available commands for the bot.";
 
-        // get the github data
-        const latestCommitHash = await getLatestCommitHash();
+    public execute(msg: Message, _args: string[]) {
+
+        const contents = JSON.parse(getFileFromRepository("/commands.json")) as HelpConfig;
+        const commands = contents.commands;
         
-        const githubURL = `https://raw.githubusercontent.com/${config.organizationName}/${config.repositoryName}/${latestCommitHash}/commands.json`;
-        const response = await fetch(githubURL).then((res) => res.json()) as HelpConfig;
-
-        const commands = response.commands;
-
-        EmbedUtils.sendResponse(ctx, EmbedUtils.embedColor.OK, "Help", "", commands.map(c => `**${c.aliases[0]}**: ${c.description}`).join('\n'))
+        EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, "Help", "", commands.map(c => `**${c.aliases[0]}**: ${c.description}`).join('\n'))
     }
 }
 
