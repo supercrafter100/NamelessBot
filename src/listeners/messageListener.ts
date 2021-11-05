@@ -9,6 +9,7 @@ import getFileFromRepository from '../util/getFileFromRepository';
 client.on('messageCreate', async (msg) => {
     if (!msg.guild) return;
     if (msg.guild.id !== config.guildID) return;
+    if (config.channelExclusions.autoresponses.includes(msg.channel.id)) return;
 
     // Global text that ocr gets run on
     let text = "";

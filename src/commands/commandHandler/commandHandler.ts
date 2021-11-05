@@ -18,6 +18,7 @@ class CommandHandler {
             if (!message.guild) return;
             if (message.author.bot) return;
             if (!message.content.startsWith(config.prefix)) return;
+            if (config.channelExclusions.commands.includes(message.channel.id)) return;
             
             const args = message.content.substring(config.prefix.length).split(/ +/g);
             const cmd = args.shift()!.toLowerCase();

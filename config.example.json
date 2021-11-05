@@ -9,6 +9,10 @@
 
     "welcomeChannelId": "welcome",
     "imageExtensions": [".png", ".jpg"],
+    "channelExclusions": { 
+        "commands": [],
+        "autoresponses": []
+    },
 
     "botowners": []
 }
