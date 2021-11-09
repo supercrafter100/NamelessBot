@@ -1,10 +1,7 @@
-import SingleValueCache from '../cache/SingleValueCache';
 import { client, config } from '../index';
-import { OCRConfig } from '../constants/types';
 import Tesseract from 'tesseract.js';
 import EmbedUtils from '../constants/EmbedUtil';
-import getFileFromRepository from '../util/getFileFromRepository';
-
+import fetch from 'node-fetch';
 
 client.on('messageCreate', async (msg) => {
     if (!msg.guild) return;
@@ -14,29 +11,26 @@ client.on('messageCreate', async (msg) => {
     // Global text that ocr gets run on
     let text = "";
 
-    // Get all available responses
-    const responses = JSON.parse(getFileFromRepository('/autoresponse.json')) as OCRConfig[];
-
+    
     // Check for attachments
     for (const attachment of msg.attachments.toJSON()) {
-    
+        
         if (!attachment.contentType?.includes('image')) {
             continue;
         }
-
+        
         // Detect text on the image
         text += " ";
         text += await Tesseract.recognize(
             attachment.url,
             'eng'
-        ).then((res) => res.data.text);
-
+        ).then((res) => res.data.text);   
     }
-
+        
     // Check for any urls
     const urlRegex =/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
     const urls = msg.content.match(urlRegex) ?? [];
-
+    
     for (const url of urls) {
         if (!isValidImageURL(url)) {
             continue;
@@ -47,48 +41,63 @@ client.on('messageCreate', async (msg) => {
             'eng'
         ).then((res) => res.data.text);
     }
-
+        
     // Finally, add the message content itself
     text += " ";
     text += msg.content;
-
+    
     // Now check if any responses match
-    const matchedResponse = matchResponse(responses, text);
+    // Get all available responses
+    const responses = require(`../../data/${config.repositoryName}/autoresponse.js`);
+    const matchedResponse = await matchResponse(responses, text);
     if (!matchedResponse) {
         return;
     }
-    EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, matchedResponse.response.title, matchedResponse.response.footer, matchedResponse.response.body.join('\n'));
+    EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, matchedResponse.title, matchedResponse.footer, matchedResponse.body.join('\n'));
 })
-
-function matchResponse(responses: OCRConfig[], text: string) {
-
+    
+async function matchResponse(responses: any, text: string) {
+    
     // Replace some characters that are likely falsely detected & will cause issues wth the key matching system
     text = text.replace(/\n/g, ' ');
     text = text.replace(/\`/g, '\'');
     text = text.replace(/\‘/g, '\'');
-    text = text.toLowerCase();
+
+    const regex = /https:\/\/debug\.namelessmc\.com\/([^\s]*)/gm;
+    const matches = regex.exec(text);
+    const debugID = matches ? matches[1] : undefined;
     
+    
+    const matchedResponses = [];
+
     for (const response of responses) {
-        if (!matchKeywords(response.keywords, text)) {
+        
+        // Check if a valid debug url is required
+        const requiredDebugURL = response.requiresDebugLink;
+        if (!debugID && requiredDebugURL) {
             continue;
         }
+        const debugContents = debugID ? await getDebugContents(debugID!) : undefined;
 
-        return response;
-    }
-}
+        const success = requiredDebugURL ? response.check(text, debugContents) : response.check(text);
 
-function matchKeywords(keywords: string[], text: string) {
-    for (const keyword of keywords) {
-        if (!text.toLowerCase().includes(keyword.toLowerCase())) {
-            return false;
+        if (success) {
+            matchedResponses.push(response);
         }
     }
-    return true;
+
+    if (matchedResponses.length === 0) {
+        return;
+    }
+
+    // Return response with the highest priority
+    return matchedResponses.reduce((curr, prev) => {
+        return (curr.priority > prev.priority) ? curr : prev;
+    }).response;
 }
 
 function isValidImageURL(text: string) {
     
-
     const cleanedURL = text.split('?')[0] // Removes any parameters because nobody likes those
     for (const ext of config.imageExtensions) {
         if (cleanedURL.endsWith(ext)) {
@@ -96,4 +105,20 @@ function isValidImageURL(text: string) {
         }
     }
     return false;
+}
+
+async function getDebugContents(debugID: string) {
+    
+    // Check if the regular paste has it
+    let paste = await fetch(`https://paste.rkslot.nl/raw/${encodeURIComponent(debugID)}`).then((res) => res.json()).catch(() => undefined);
+    if (paste) {
+        return paste;
+    }
+
+    paste = await fetch(`https://bytebin.rkslot.nl/${encodeURIComponent(debugID)}`).then((res) => res.json()).catch(() => undefined);
+    if (paste) {
+        return paste;
+    }
+
+    return undefined;
 }

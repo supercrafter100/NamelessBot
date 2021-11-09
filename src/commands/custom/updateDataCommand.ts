@@ -22,6 +22,10 @@ class updateDataCommand {
         
         msg.channel.send("Updating data...");
         await CloneGitRepository(`${config.organizationName}/${config.repositoryName}`, config.branch, join(__dirname, '../../../data'));
+
+        // Delete auto responses cached data and re-import it
+        delete require.cache[require.resolve(`../../../data/${config.repositoryName}/autoresponse.js`)];
+        require(`../../../data/${config.repositoryName}/autoresponse.js`);
         msg.channel.send("Data updated!");
     }
 }
