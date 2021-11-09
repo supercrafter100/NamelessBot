@@ -108,14 +108,8 @@ function isValidImageURL(text: string) {
 }
 
 async function getDebugContents(debugID: string) {
-    
-    // Check if the regular paste has it
-    let paste = await fetch(`https://paste.rkslot.nl/raw/${encodeURIComponent(debugID)}`).then((res) => res.json()).catch(() => undefined);
-    if (paste) {
-        return paste;
-    }
 
-    paste = await fetch(`https://bytebin.rkslot.nl/${encodeURIComponent(debugID)}`).then((res) => res.json()).catch(() => undefined);
+    const paste = await fetch(`https://bytebin.rkslot.nl/${encodeURIComponent(debugID)}`).then((res) => res.json()).catch(() => undefined);
     if (paste) {
         return paste;
     }
