@@ -46,54 +46,83 @@ client.on('messageCreate', async (msg) => {
     text += " ";
     text += msg.content;
     
-    // Now check if any responses match
-    // Get all available responses
-    const responses = require(`../../data/${config.repositoryName}/autoresponse.js`);
-    const matchedResponse = await matchResponse(responses, text);
-    if (!matchedResponse) {
-        return;
-    }
-    EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, matchedResponse.title, matchedResponse.footer, matchedResponse.body.join('\n'));
+    // Run the checks
+    const matchRegular = await runRegularChecks(text);
+    const matchDebug = await runDebugChecks(text);
+
+    if (matchRegular) EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, matchRegular.title, matchRegular.footer, matchRegular.body.join('\n'));
+    if (matchDebug) EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, matchDebug.title, matchDebug.footer, matchDebug.body.join('\n'));
 })
-    
-async function matchResponse(responses: any, text: string) {
-    
+
+const runRegularChecks = async (text: string) => {
+
+    text = text.replace(/\n/g, ' ');
+    text = text.replace(/\`/g, '\'');
+    text = text.replace(/\‘/g, '\'');
+
+    // Loop through each response and execute it
+    const responses = require(`../../data/${config.repositoryName}/autoresponse.json`);
+    for (const response of responses) {
+        if (!keywordsMatch(response.keywords, text)) {
+            continue;
+        }
+
+        return response.response;
+    }
+}
+
+const runDebugChecks = async (text: string) => {
+
     // Replace some characters that are likely falsely detected & will cause issues wth the key matching system
     text = text.replace(/\n/g, ' ');
     text = text.replace(/\`/g, '\'');
     text = text.replace(/\‘/g, '\'');
 
+    // Extract the debug link ID
     const regex = /https:\/\/debug\.namelessmc\.com\/([^\s]*)/gm;
     const matches = regex.exec(text);
     const debugID = matches ? matches[1] : undefined;
-    
-    
-    const matchedResponses = [];
 
-    for (const response of responses) {
-        
-        // Check if a valid debug url is required
-        const requiredDebugURL = response.requiresDebugLink;
-        if (!debugID && requiredDebugURL) {
-            continue;
-        }
-        const debugContents = debugID ? await getDebugContents(debugID!) : undefined;
-
-        const success = requiredDebugURL ? response.check(text, debugContents) : response.check(text);
-
-        if (success) {
-            matchedResponses.push(response);
-        }
-    }
-
-    if (matchedResponses.length === 0) {
+    if (!debugID) {
         return;
     }
 
-    // Return response with the highest priority
-    return matchedResponses.reduce((curr, prev) => {
-        return (curr.priority > prev.priority) ? curr : prev;
-    }).response;
+    const debugContent = await getDebugContents(debugID);
+    if (!debugContent) {
+        return;
+    }
+
+    const responses = require(`../../data/${config.repositoryName}/debugLink_responses.js`);
+    for (const response of responses) {
+        // Check if all keywords match
+        if (!keywordsMatch(response.keywords, text)) {
+            continue;
+        }
+        // Run the check
+        const returnValue = response.execute(debugContent);
+        if (returnValue) {
+            return returnValue;
+        }
+    }
+}
+
+const keywordsMatch = (keywords: any, text: string) => {
+
+    for (const keyword of keywords) {
+
+        const isArray = Array.isArray(keyword);
+        if (isArray) {
+            if (!keyword.some((key) => text.includes(key))) {
+                return false;
+            }
+        } else {
+            if (!text.includes(keyword)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 function isValidImageURL(text: string) {
