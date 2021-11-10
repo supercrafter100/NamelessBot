@@ -30,7 +30,7 @@ export {
 }
 
 // Clone from the github repository to ensure we have the latest files
-CloneGitRepository(`${config.organizationName}/${config.repositoryName}`, config.branch, join(__dirname, '../../../data'));
+CloneGitRepository(`${config.organizationName}/${config.repositoryName}`, config.branch, join(__dirname, '../data'));
 
 // OCR
 import './listeners/messageListener';
