@@ -2,7 +2,11 @@ import { client, config } from '../index';
 import Tesseract from 'tesseract.js';
 import EmbedUtils from '../constants/EmbedUtil';
 import fetch from 'node-fetch';
+import { MessageEmbed, TextChannel } from 'discord.js';
 
+/**
+ * Used for automatic responses
+ */
 client.on('messageCreate', async (msg) => {
     if (!msg.guild) return;
     if (msg.guild.id !== config.guildID) return;
@@ -52,6 +56,50 @@ client.on('messageCreate', async (msg) => {
 
     if (matchRegular) EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, matchRegular.title, matchRegular.footer, matchRegular.body.join('\n'));
     if (matchDebug) EmbedUtils.sendResponse(msg, EmbedUtils.embedColor.OK, matchDebug.title, matchDebug.footer, matchDebug.body.join('\n'));
+})
+
+/**
+ * Used for message mention stuff
+ */
+client.on('messageCreate', async (msg) => {
+
+    const regex = /https:\/\/discord.com\/channels\/(\d{18})\/(\d{18})\/(\d{18})/gm;
+    const matches = regex.exec(msg.content);
+
+    if (!matches) {
+        return;
+    }
+
+    const channelId = matches[2];
+    const messageID = matches[3];
+
+    const channel = await client.channels.fetch(channelId);
+    if (!channel || !(channel instanceof TextChannel)) {
+        return;
+    }
+
+    const message = await channel.messages.fetch(messageID);
+    if (!message) {
+        return;
+    }
+
+    // If embed, send embed
+    if (message.embeds[0]) {
+        msg.channel.send({ embeds: [ message.embeds[0] ] });
+        return;
+    }    
+
+    // Send message content
+    const content = message.content;
+    const embed = new MessageEmbed()
+        .setAuthor(message.author.tag, message.author.avatarURL({ dynamic: true }) || "")
+        .setTimestamp(message.createdTimestamp)
+        .setDescription(content)
+        .setFooter(`Sent in: #${channel.name}`)
+        .setColor('#FBBF24');
+    
+    msg.channel.send({ embeds: [ embed ]});
+
 })
 
 const runRegularChecks = async (text: string) => {
